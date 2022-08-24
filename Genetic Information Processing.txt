@@ -1,0 +1,23 @@
+Genetic Information Processing
+RNA polymerase
+Basal transcription factors
+Spliceosome
+Ribosome
+Aminoacyl-tRNA biosynthesis
+Nucleocytoplasmic transport
+mRNA surveillance pathway
+Ribosome biogenesis in eukaryotes
+Protein export
+Protein processing in endoplasmic reticulum
+SNARE interactions in vesicular transport
+Ubiquitin mediated proteolysis
+Sulfur relay system
+Proteasome
+RNA degradation
+DNA replication
+Base excision repair
+Nucleotide excision repair
+Mismatch repair
+Homologous recombination
+Non-homologous end-joining
+Fanconi anemia pathway

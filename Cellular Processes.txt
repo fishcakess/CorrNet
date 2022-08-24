@@ -1,0 +1,18 @@
+Cellular Processes
+Endocytosis
+Phagosome
+Lysosome
+Peroxisome
+Cell cycle
+Oocyte meiosis
+Apoptosis
+Ferroptosis
+Necroptosis
+p53 signaling pathway
+Cellular senescence
+Focal adhesion
+Adherens junction
+Tight junction
+Gap junction
+Signaling pathways regulating pluripotency of stem cells
+Regulation of actin cytoskeleton

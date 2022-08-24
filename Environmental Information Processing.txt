@@ -1,0 +1,32 @@
+Environmental Information Processing
+ABC transporters
+MAPK signaling pathway
+ErbB signaling pathway
+Ras signaling pathway
+Rap1 signaling pathway
+Wnt signaling pathway
+Notch signaling pathway
+Hedgehog signaling pathway
+TGF-beta signaling pathway
+Hippo signaling pathway
+VEGF signaling pathway
+Apelin signaling pathway
+JAK-STAT signaling pathway
+NF-kappa B signaling pathway
+TNF signaling pathway
+HIF-1 signaling pathway
+FoxO signaling pathway
+Calcium signaling pathway
+Phosphatidylinositol signaling system
+Phospholipase D signaling pathway
+Sphingolipid signaling pathway
+cAMP signaling pathway
+cGMP-PKG signaling pathway
+PI3K-Akt signaling pathway
+AMPK signaling pathway
+mTOR signaling pathway
+Neuroactive ligand-receptor interaction
+Cytokine-cytokine receptor interaction
+Viral protein interaction with cytokine and cytokine receptor
+ECM-receptor interaction
+Cell adhesion molecules
