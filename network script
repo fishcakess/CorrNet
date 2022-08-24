@@ -1,0 +1,257 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import networkx as nx
+import community as louvain_communities
+import pickle
+import copy
+
+
+
+
+# data = pd.read_csv('corrmatrix.csv',index_col=0)
+
+# rownames = data.index.values
+
+# data_matrix = np.asmatrix(data)
+
+# np.fill_diagonal(data.values, 0) #change self correlations to 0 
+
+# #change to matrix from a dataframe, easier with networkx
+
+
+
+# #### draw graphs
+
+
+# G = nx.from_numpy_matrix(data_matrix)
+# G = nx.relabel_nodes(G,lambda x:rownames[x])
+
+
+# labels = pd.read_csv('pathwaylables',sep=',',index_col=0)
+
+# paths = labels.set_index("mypathways")
+# paths, pathtypes = np.unique(paths, return_inverse=True)
+
+
+def generate_network(filename):
+
+    data = pd.read_csv(filename,index_col = 0)
+    rownames = data.index.values
+
+    data_matrix = np.asmatrix(data)
+    np.fill_diagonal(data.values, 0)
+
+    G = nx.from_numpy_matrix(data_matrix)
+    G = nx.relabel_nodes(G,lambda x:rownames[x])
+
+    return G
+
+def create_corr_network(G, corr_direction, min_correlation):
+    labels = pd.read_csv('pathwaylables',sep=',',index_col=0)
+    paths = labels.set_index("mypathways")
+    paths, pathtypes = np.unique(paths, return_inverse=True)
+    
+    ##Creates a copy of the graph
+    H = G.copy()
+    
+    ##Checks all the edges and removes some based on corr_direction
+    for stock1, stock2, weight in G.edges(data=True):
+        ##if we only want to see the positive correlations we then delete the edges with weight smaller than 0        
+        if corr_direction == "positive":
+            ####it adds a minimum value for correlation. 
+            ####If correlation weaker than the min, then it deletes the edge
+            if weight["weight"] <0 or weight["weight"] < min_correlation:
+                H.remove_edge(stock1, stock2)
+        ##this part runs if the corr_direction is negative and removes edges with weights equal or largen than 0
+        else:
+            ####it adds a minimum value for correlation. 
+            ####If correlation weaker than the min, then it deletes the edge
+            if weight["weight"] >=0 or weight["weight"] > min_correlation:
+                H.remove_edge(stock1, stock2)
+                
+    
+    #crates a list for edges and for the weights
+    edges,weights = zip(*nx.get_edge_attributes(H,'weight').items())
+    #
+    weights = np.array(weights)
+    weights[weights == 1] = 0
+    #
+    ### increases the value of weights, so that they are more visible in the graph
+    weights = tuple([(1+abs(x))**2 for x in weights])
+    
+    #####calculates the degree of each node
+    d = nx.degree(H)
+    d = dict(d)
+    
+    sorted_d = dict(sorted(d.items(), key=lambda item: item[1]))
+    topnodes = list(sorted_d.keys())
+    topnodes = topnodes[-20:]
+    labels = {}
+    
+    #####creates list of nodes and a list their degrees that will be used later for their sizes
+    
+    nodelist, node_sizes = zip(*d.items())
+    
+    for node in d:
+        if node in topnodes:
+            labels[node] = node
+
+    #positions
+    
+    positions=nx.circular_layout(H)
+    
+    offset = 0
+    pos_labels = {}
+    keys = positions.keys()
+    for key in keys:
+        x, y = positions[key]
+        if x > 0.3:
+            x_offset = -0.15
+        if x < 0:
+            x_offset = 0 
+        pos_labels[key] = (x+x_offset, y)
+        
+    #Figure size
+    plt.figure(figsize=(30,30))
+
+    
+    
+    #draws nodes
+    nx.draw_networkx_nodes(H,positions,node_color=pathtypes,nodelist=nodelist)
+                           #####the node size will be now based on its degree
+                           #node_size=tuple([x**2 for x in node_sizes]),alpha=0.8)
+            
+    
+    
+    #Styling for labels
+    nx.draw_networkx_labels(H, pos_labels, labels, font_size=25, 
+                            font_family='sans-serif')
+    
+    ###edge colors based on weight direction
+    if corr_direction == "positive":
+        edge_colour = plt.cm.GnBu 
+    else:
+        edge_colour = plt.cm.PuRd
+        
+    #draws the edges
+    nx.draw_networkx_edges(H, positions, edgelist=edges,style='solid',
+                          ###adds width=weights and edge_color = weights 
+                          ###so that edges are based on the weight parameter 
+                          ###edge_cmap is for the color scale based on the weight
+                          ### edge_vmin and edge_vmax assign the min and max weights for the width
+                          width=weights, edge_color = weights, edge_cmap = edge_colour,
+                          edge_vmin = min(weights), edge_vmax=max(weights))
+
+    # displays the graph without axis
+    plt.axis('off')
+    #saves image
+    plt.margins(0.1,0.1)
+    
+    plt.legend(labels = pathtypes, loc='upper right',fontsize= 20)
+    plt.savefig("all pathways " + str(min_correlation) + ".png", format="PNG")
+    plt.show()
+    
+    return H ######## removed plt.show
+
+def save_network_clusters(network,filename):
+
+    louvain = louvain_communities.best_partition(network)
+    louvain_communities.modularity(louvain,network)
+    results = {}
+    for key,value in louvain.items():
+        if value not in results:
+            results[value] = []
+            results[value].append(key)
+        else:
+            results[value].append(key)
+    resultscopy = copy.deepcopy(results)
+
+    for key,value in resultscopy.items():
+        if len(resultscopy[key]) <= 3:
+            del results[key]
+    
+    with open(filename, 'wb') as f:
+        pickle.dump(results, f)
+
+    return
+
+def filter_network(network):
+    corr_strength = np.arange(0,0.42,0.02).tolist()
+    results = {}
+    for strength in corr_strength:
+        x = create_corr_network(network, 'positive',strength)
+        mapk_edges = len(x.edges('MAPK signaling pathway'))
+        pi3k_edges = len(x.edges('PI3K-Akt signaling pathway'))
+        eigen_c = nx.eigenvector_centrality(x,max_iter = 1000)
+        eigen_pi3k = eigen_c['PI3K-Akt signaling pathway']
+        eigen_mapk = eigen_c['MAPK signaling pathway']
+        stat = (pi3k_edges*eigen_pi3k)+(mapk_edges*eigen_mapk)
+        louvain = louvain_communities.best_partition(x)
+        modularity = louvain_communities.modularity(louvain,x)
+        results[strength] = stat*modularity
+    
+    return max(results, key=results.get)
+
+G = generate_network('corrmatrix.csv')
+
+#stat = filter_network(G)
+
+x = create_corr_network(G,'positive',0.36)
+
+#print(stat)
+
+#save_network_clusters(x,'metabolism eip network.pkl')
+
+#get stats
+
+def filter_network2(network):
+    corr_strength = np.arange(0,0.42,0.02).tolist()
+    results = {}
+    for strength in corr_strength:
+        x = create_corr_network(network, 'positive',strength)
+        mapk_edges = len(x.edges('MAPK signaling pathway'))
+        pi3k_edges = len(x.edges('PI3K-Akt signaling pathway'))
+        eigen_c = nx.eigenvector_centrality(x, max_iter = 1000)
+        eigen_pi3k = eigen_c['PI3K-Akt signaling pathway']
+        eigen_mapk = eigen_c['MAPK signaling pathway']
+        stat = (pi3k_edges*eigen_pi3k)+(mapk_edges*eigen_mapk)
+        louvain = louvain_communities.best_partition(x)
+        modularity = louvain_communities.modularity(louvain,x)
+        results[strength] = stat*modularity
+    
+    optimum = max(results,key=results.get)
+
+    create_corr_network(network,'positive',optimum)
+
+    mapk_edges = len(x.edges('MAPK signaling pathway'))
+    pi3k_edges = len(x.edges('PI3K-Akt signaling pathway'))
+    eigen_c = nx.eigenvector_centrality(x, max_iter = 1000)
+    eigen_pi3k = eigen_c['PI3K-Akt signaling pathway']
+    eigen_mapk = eigen_c['MAPK signaling pathway']
+    stat = (pi3k_edges*eigen_pi3k)+(mapk_edges*eigen_mapk)
+    louvain = louvain_communities.best_partition(x)
+    modularity = louvain_communities.modularity(louvain,x)
+
+    print('MAPK EDGES' + str(mapk_edges) + 'PI3K EDGES' + str(pi3k_edges) + 'EIGEN PI3K ' + str(eigen_pi3k) + 'EIGEN MAPK ' +str(eigen_mapk) + 'MODULARITY ' + str(modularity))
+
+    return 
+
+#filter_network2(G)
+
+#non met csv and non-met labels used above - CHANGE BACK WHEN NEEDED
+
+
+# corr_strength = np.arange(0,0.4,0.02).tolist()
+# results = {}
+# for strength in corr_strength:
+#     x = create_corr_network(G, 'positive',strength)
+#     mapk_edges = len(x.edges('MAPK signaling pathway'))
+#     pi3k_edges = len(x.edges('PI3K-Akt signaling pathway'))
+#     eigen_c = nx.eigenvector_centrality(x)
+#     eigen_pi3k = eigen_c['PI3K-Akt signaling pathway']
+#     eigen_mapk = eigen_c['MAPK signaling pathway']
+#     stat = (pi3k_edges*eigen_pi3k)+(mapk_edges*eigen_mapk)
+#     louvain = louvain_communities.best_partition(x)
+#     modularity = louvain_communities.modularity(louvain,x)
+#     results[strength] = stat*modularity
